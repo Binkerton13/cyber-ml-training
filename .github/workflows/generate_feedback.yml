@@ -1,1 +1,81 @@
 # Workflow: generate feedback
+name: Generate Feedback Report
+
+on:
+  workflow_run:
+    workflows: ["Evaluate Student Submission"]
+    types:
+      - completed
+
+jobs:
+  generate_feedback:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Generate feedback report
+      run: |
+        python - << 'EOF'
+        import json, os
+
+        # Load evaluation results
+        with open("evaluation_results/evaluation_output.json") as f:
+            data = json.load(f)
+
+        total = data["total_score"]
+        soc = data["soc"]
+        ml = data["ml"]
+        combined = data["combined"]
+
+        # Build markdown report
+        md = f"""
+# Scenario 01 — Feedback Report
+
+## Total Score: **{total} / 300**
+
+---
+
+## SOC Evaluation
+**Score:** {soc["soc_score"]} / 100  
+**Feedback:**
+- " + "\\n- ".join(soc["soc_feedback"]) + """
+
+---
+
+## ML Evaluation
+**Score:** {ml["ml_score"]} / 100  
+**Feedback:**
+- " + "\\n- ".join(ml["ml_feedback"]) + """
+
+---
+
+## Combined Evaluation
+**Score:** {combined["combined_score"]} / 100  
+**Feedback:**
+- " + "\\n- ".join(combined["combined_feedback"]) + """
+
+---
+
+## Summary
+This report summarizes your SOC analysis, ML model performance, and how well your findings aligned. Review the feedback above to improve your next submission.
+"""
+
+        # Save report
+        os.makedirs("feedback_reports", exist_ok=True)
+        with open("feedback_reports/scenario_01_feedback.md", "w") as f:
+            f.write(md)
+
+        EOF
+
+    - name: Commit feedback report
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "Add feedback report"
+        file_pattern: "feedback_reports/scenario_01_feedback.md"

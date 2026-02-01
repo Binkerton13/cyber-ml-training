@@ -1,1 +1,77 @@
 # Workflow: evaluate submissions
+name: Evaluate Student Submission
+
+on:
+  push:
+    paths:
+      - "student_submissions/**"
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas scikit-learn
+
+    - name: Locate student submission
+      id: find_files
+      run: |
+        echo "SOC_FILE=$(find student_submissions -name soc_output.json)" >> $GITHUB_ENV
+        echo "ML_FILE=$(find student_submissions -name ml_output.json)" >> $GITHUB_ENV
+
+    - name: Evaluate SOC Output
+      run: |
+        python scenarios/scenario_01/evaluation/evaluate_soc.py $SOC_FILE > soc_result.json
+
+    - name: Evaluate ML Output
+      run: |
+        python scenarios/scenario_01/evaluation/evaluate_ml.py $ML_FILE > ml_result.json
+
+    - name: Evaluate Combined Output
+      run: |
+        python scenarios/scenario_01/evaluation/evaluate_combined.py $SOC_FILE $ML_FILE > combined_result.json
+
+    - name: Combine all results
+      run: |
+        python - << 'EOF'
+        import json
+
+        with open("soc_result.json") as f:
+            soc = json.load(f)
+        with open("ml_result.json") as f:
+            ml = json.load(f)
+        with open("combined_result.json") as f:
+            combined = json.load(f)
+
+        final = {
+            "soc": soc,
+            "ml": ml,
+            "combined": combined,
+            "total_score": soc["soc_score"] + ml["ml_score"] + combined["combined_score"]
+        }
+
+        with open("evaluation_output.json", "w") as f:
+            json.dump(final, f, indent=4)
+        EOF
+
+    - name: Save evaluation results
+      run: |
+        mkdir -p evaluation_results
+        cp evaluation_output.json evaluation_results/
+
+    - name: Commit evaluation results
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "Add evaluation results"
+        file_pattern: "evaluation_results/evaluation_output.json"

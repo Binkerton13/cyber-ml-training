@@ -1,0 +1,6 @@
+{
+    "anomaly_score": -0.25,
+    "model_used": "IsolationForest",
+    "features": ["hour", "geo_enc", "device_enc"],
+    "explanation": "Higher anomaly score indicates unusual login behavior."
+}

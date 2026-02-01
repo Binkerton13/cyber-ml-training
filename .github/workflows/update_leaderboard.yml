@@ -1,1 +1,61 @@
 # Workflow: update leaderboard
+name: Update Leaderboard
+
+on:
+  workflow_run:
+    workflows: ["Generate Feedback Report"]
+    types:
+      - completed
+
+jobs:
+  update_leaderboard:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    - name: Update leaderboard
+      run: |
+        python - << 'EOF'
+        import json, os
+
+        # Load evaluation results
+        with open("evaluation_results/evaluation_output.json") as f:
+            results = json.load(f)
+
+        # Load existing leaderboard
+        if os.path.exists("leaderboard.json"):
+            with open("leaderboard.json") as f:
+                leaderboard = json.load(f)
+        else:
+            leaderboard = {}
+
+        # Identify student folder name
+        student_dirs = [d for d in os.listdir("student_submissions") if os.path.isdir(os.path.join("student_submissions", d))]
+        student = student_dirs[0] if student_dirs else "unknown_student"
+
+        # Update leaderboard entry
+        leaderboard[student] = {
+            "soc_score": results["soc"]["soc_score"],
+            "ml_score": results["ml"]["ml_score"],
+            "combined_score": results["combined"]["combined_score"],
+            "total_score": results["total_score"]
+        }
+
+        # Save updated leaderboard
+        with open("leaderboard.json", "w") as f:
+            json.dump(leaderboard, f, indent=4)
+
+        EOF
+
+    - name: Commit leaderboard update
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "Update leaderboard"
+        file_pattern: "leaderboard.json"

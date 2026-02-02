@@ -4,5 +4,11 @@
         "ml_score": 100,
         "combined_score": 100,
         "total_score": 280
+    },
+    "unknown_student": {
+        "soc_score": 80,
+        "ml_score": 100,
+        "combined_score": 100,
+        "total_score": 280
     }
 }

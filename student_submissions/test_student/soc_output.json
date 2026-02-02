@@ -1,6 +1,6 @@
 {
     "ioc_list": ["185.199.110.153"],
     "mitre_mapping": ["T1078", "T1021"],
-    "triage_summary": "Suspicious login from new IP, new device, new geo, odd hour.",
+    "triage_summary": "Suspicious login from new IP, new device, new geo, odd hour..",
     "detection_rule": "source_ip == '185.199.110.153'"
 }

@@ -1,1 +1,8 @@
-{}
+{
+    "test_student": {
+        "soc_score": 80,
+        "ml_score": 100,
+        "combined_score": 100,
+        "total_score": 280
+    }
+}

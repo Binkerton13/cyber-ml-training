@@ -1,0 +1,17 @@
+{
+    "soc": {
+        "soc_score": 80,
+        "soc_feedback": [
+            "Detection rule does not match suspicious IP."
+        ]
+    },
+    "ml": {
+        "ml_score": 100,
+        "ml_feedback": []
+    },
+    "combined": {
+        "combined_score": 100,
+        "combined_feedback": []
+    },
+    "total_score": 280
+}

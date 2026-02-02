@@ -4,13 +4,16 @@ import random
 from datetime import datetime, timedelta
 
 import pandas as pd
+import numpy as np
 
 # -----------------------------
 # Path-safe directory handling
 # -----------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOG_DIR = os.path.join(BASE_DIR, "..", "logs")
-EVAL_DIR = os.path.join(BASE_DIR, "..", "evaluation")
+GEN_DIR = os.path.dirname(os.path.abspath(__file__))          # /scenario_03/generator
+BASE_DIR = os.path.abspath(os.path.join(GEN_DIR, ".."))       # /scenario_03
+
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+EVAL_DIR = os.path.join(BASE_DIR, "evaluation")
 
 os.makedirs(LOG_DIR, exist_ok=True)
 os.makedirs(EVAL_DIR, exist_ok=True)
@@ -54,27 +57,27 @@ def generate_iam_logs(comp_user, attacker_ip, attacker_region, base_time):
         rows.append({
             "timestamp": (base_time + timedelta(minutes=i)).isoformat() + "Z",
             "user": random.choice(USERS),
-            "action": "ConsoleLogin",
+            "event_name": "ConsoleLogin",
             "source_ip": random_internal_ip(),
             "region": random.choice(REGIONS_NORMAL),
             "result": "Success"
         })
 
-    # Suspicious login from unusual region
+    # Suspicious login
     rows.append({
         "timestamp": (base_time + timedelta(minutes=45)).isoformat() + "Z",
         "user": comp_user,
-        "action": "ConsoleLogin",
+        "event_name": "ConsoleLogin",
         "source_ip": attacker_ip,
         "region": attacker_region,
         "result": "Success"
     })
 
-    # Privilege escalation sequence
+    # Privilege escalation
     rows.append({
         "timestamp": (base_time + timedelta(minutes=47)).isoformat() + "Z",
         "user": comp_user,
-        "action": "CreateAccessKey",
+        "event_name": "CreateAccessKey",
         "source_ip": attacker_ip,
         "region": attacker_region,
         "result": "Success"
@@ -82,7 +85,7 @@ def generate_iam_logs(comp_user, attacker_ip, attacker_region, base_time):
     rows.append({
         "timestamp": (base_time + timedelta(minutes=49)).isoformat() + "Z",
         "user": comp_user,
-        "action": "AttachRolePolicy",
+        "event_name": "AttachRolePolicy",
         "source_ip": attacker_ip,
         "region": attacker_region,
         "result": "Success"
@@ -90,7 +93,7 @@ def generate_iam_logs(comp_user, attacker_ip, attacker_region, base_time):
     rows.append({
         "timestamp": (base_time + timedelta(minutes=51)).isoformat() + "Z",
         "user": comp_user,
-        "action": "AssumeRole",
+        "event_name": "AssumeRole",
         "source_ip": attacker_ip,
         "region": attacker_region,
         "result": "Success"
@@ -100,7 +103,7 @@ def generate_iam_logs(comp_user, attacker_ip, attacker_region, base_time):
 
 
 # -----------------------------
-# API call log generation
+# CloudTrail API log generation
 # -----------------------------
 def generate_api_logs(comp_user, attacker_ip, attacker_region, base_time):
     rows = []
@@ -110,8 +113,9 @@ def generate_api_logs(comp_user, attacker_ip, attacker_region, base_time):
         rows.append({
             "timestamp": (base_time + timedelta(minutes=i)).isoformat() + "Z",
             "user": random.choice(USERS),
-            "api_call": random.choice(["DescribeInstances", "ListBuckets", "GetParameter"]),
+            "event_name": random.choice(["DescribeInstances", "ListBuckets", "GetParameter"]),
             "resource": random.choice(BUCKETS_NORMAL),
+            "region": random.choice(REGIONS_NORMAL),
             "latency_ms": random.randint(20, 200),
             "status": "200"
         })
@@ -120,16 +124,18 @@ def generate_api_logs(comp_user, attacker_ip, attacker_region, base_time):
     rows.append({
         "timestamp": (base_time + timedelta(minutes=55)).isoformat() + "Z",
         "user": comp_user,
-        "api_call": "ListBuckets",
+        "event_name": "ListBuckets",
         "resource": "*",
+        "region": attacker_region,
         "latency_ms": random.randint(30, 150),
         "status": "200"
     })
     rows.append({
         "timestamp": (base_time + timedelta(minutes=56)).isoformat() + "Z",
         "user": comp_user,
-        "api_call": "ListObjects",
+        "event_name": "ListObjects",
         "resource": BUCKET_SENSITIVE,
+        "region": attacker_region,
         "latency_ms": random.randint(30, 150),
         "status": "200"
     })
@@ -139,18 +145,20 @@ def generate_api_logs(comp_user, attacker_ip, attacker_region, base_time):
         rows.append({
             "timestamp": (base_time + timedelta(minutes=57, seconds=30 * i)).isoformat() + "Z",
             "user": comp_user,
-            "api_call": "GetObject",
+            "event_name": "GetObject",
             "resource": f"{BUCKET_SENSITIVE}/{obj}",
+            "region": attacker_region,
             "latency_ms": random.randint(40, 250),
             "status": "200"
         })
 
-    # Exfiltration phase (modeled as PutObject to external bucket)
+    # Exfiltration
     rows.append({
         "timestamp": (base_time + timedelta(minutes=60)).isoformat() + "Z",
         "user": comp_user,
-        "api_call": "PutObject",
+        "event_name": "PutObject",
         "resource": BUCKET_ATTACKER,
+        "region": attacker_region,
         "latency_ms": random.randint(50, 300),
         "status": "200"
     })
@@ -159,7 +167,7 @@ def generate_api_logs(comp_user, attacker_ip, attacker_region, base_time):
 
 
 # -----------------------------
-# S3 access log generation
+# S3 access logs (optional for SOC)
 # -----------------------------
 def generate_storage_logs(comp_user, attacker_ip, base_time):
     rows = []
@@ -170,7 +178,7 @@ def generate_storage_logs(comp_user, attacker_ip, base_time):
             "timestamp": (base_time + timedelta(minutes=i)).isoformat() + "Z",
             "user": random.choice(USERS),
             "bucket": random.choice(BUCKETS_NORMAL),
-            "object": "logs/app_{}.log".format(random.randint(1, 100)),
+            "object": f"logs/app_{random.randint(1, 100)}.log",
             "bytes_read": random.randint(1000, 50000),
             "bytes_written": random.randint(0, 2000),
             "source_ip": random_internal_ip()
@@ -188,7 +196,7 @@ def generate_storage_logs(comp_user, attacker_ip, base_time):
             "source_ip": attacker_ip
         })
 
-    # Exfiltration write (modeled as large write to external bucket)
+    # Exfiltration
     rows.append({
         "timestamp": (base_time + timedelta(minutes=60)).isoformat() + "Z",
         "user": comp_user,
@@ -202,6 +210,40 @@ def generate_storage_logs(comp_user, attacker_ip, base_time):
     return pd.DataFrame(rows)
 
 
+# -----------------------------
+# ML Feature Dataset Generation
+# -----------------------------
+def generate_api_feature_table(api_df):
+    """
+    Produces ML‑friendly behavioral features for Scenario 03C.
+    """
+    df = api_df.copy()
+
+    # Convert timestamp
+    df["timestamp"] = pd.to_datetime(df["timestamp"].str.replace("Z", ""), utc=True)
+    df["hour"] = df["timestamp"].dt.hour
+
+    # Group by user for behavioral aggregation
+    grouped = df.groupby("user")
+
+    feature_table = pd.DataFrame({
+        "user": grouped.size().index,
+        "api_count_total": grouped.size().values,
+        "unique_api_calls": grouped["event_name"].nunique().values,
+        "unique_resources": grouped["resource"].nunique().values,
+        "avg_latency": grouped["latency_ms"].mean().values,
+        "error_rate": (grouped["status"].apply(lambda x: (x != "200").mean())).values,
+        "region_entropy": grouped["region"].apply(lambda x: x.value_counts(normalize=True).mul(np.log2(x.value_counts(normalize=True))).sum() * -1).values,
+        "hour_mean": grouped["hour"].mean().values,
+        "hour_std": grouped["hour"].std().fillna(0).values
+    })
+
+    return feature_table
+
+
+# -----------------------------
+# Main
+# -----------------------------
 def main():
     base_time = datetime.now()
     compromised_user = random.choice(USERS)
@@ -212,14 +254,25 @@ def main():
     api_df = generate_api_logs(compromised_user, attacker_ip, attacker_region, base_time)
     storage_df = generate_storage_logs(compromised_user, attacker_ip, base_time)
 
-    iam_path = os.path.join(LOG_DIR, "iam.csv")
-    api_path = os.path.join(LOG_DIR, "api_calls.csv")
+    # ML feature dataset
+    feature_df = generate_api_feature_table(api_df)
+
+    # -----------------------------
+    # Save logs with new naming
+    # -----------------------------
+    iam_path = os.path.join(LOG_DIR, "cloud_iam.csv")
+    api_path = os.path.join(LOG_DIR, "cloud_api.csv")
     storage_path = os.path.join(LOG_DIR, "storage_access.csv")
+    feature_path = os.path.join(LOG_DIR, "cloud_api_features.csv")
 
     iam_df.to_csv(iam_path, index=False)
     api_df.to_csv(api_path, index=False)
     storage_df.to_csv(storage_path, index=False)
+    feature_df.to_csv(feature_path, index=False)
 
+    # -----------------------------
+    # Save answer key
+    # -----------------------------
     answer_key = {
         "compromised_user": compromised_user,
         "attacker_ip": attacker_ip,
@@ -228,11 +281,11 @@ def main():
         "attacker_bucket": BUCKET_ATTACKER,
         "sensitive_objects": SENSITIVE_OBJECTS,
         "expected_mitre": [
-            "T1078",  # Valid Accounts
-            "T1098",  # Account Manipulation
-            "T1087",  # Account Discovery
-            "T1530",  # Data from Cloud Storage
-            "T1567"   # Exfiltration to Cloud Storage
+            "T1078",
+            "T1098",
+            "T1087",
+            "T1530",
+            "T1567"
         ]
     }
 
@@ -243,6 +296,7 @@ def main():
     print(f"IAM logs: {iam_path}")
     print(f"API logs: {api_path}")
     print(f"Storage logs: {storage_path}")
+    print(f"ML feature table: {feature_path}")
 
 
 if __name__ == "__main__":

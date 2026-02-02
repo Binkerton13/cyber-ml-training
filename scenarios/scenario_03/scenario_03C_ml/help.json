@@ -1,0 +1,260 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "source": [
+    "# Scenario 03C — Incremental Help Notebook (AWS CloudTrail ML)\n",
+    "\n",
+    "This notebook provides **optional, step‑by‑step hints** for Scenario 03C.\n",
+    "\n",
+    "Each section includes:\n",
+    "- A conceptual hint\n",
+    "- A more concrete hint\n",
+    "- An optional reveal cell\n",
+    "\n",
+    "Use this notebook only if you get stuck — the main notebook is designed to be completed independently."
+    ]
+  },
+
+
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## 1. Understanding CloudTrail logs\n",
+    "\n",
+    "**Goal:** Understand what `cloud_api.csv` represents.\n",
+    "\n",
+    "### First Hint\n",
+    "CloudTrail logs record every AWS API call made by users, roles, or services.\n",
+    "\n",
+    "### Second Hint\n",
+    "Look at fields like `event_name`, `user`, `role`, `region`, `resource`, and `timestamp`.\n",
+    "\n",
+    "### Reveal (optional)"
+    ]
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "cloud_api_df.head(), cloud_api_df.info()"
+    ]
+  },
+
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## 2. Understanding the ML feature dataset\n",
+    "\n",
+    "**Goal:** Understand what `cloud_api_features.csv` contains.\n",
+    "\n",
+    "### First Hint\n",
+    "These features summarize behavioral patterns over time.\n",
+    "\n",
+    "### Second Hint\n",
+    "Look for counts, unique values, entropy, error rates, and time‑based features.\n",
+    "\n",
+    "### Reveal (optional)"
+    ]
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "features_df.head(), features_df.describe(include='all')"
+    ]
+  },
+
+
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## 3. Timestamp normalization\n",
+    "\n",
+    "**Goal:** Ensure timestamps are parsed correctly and usable for correlation.\n",
+    "\n",
+    "### First Hint\n",
+    "Use `pd.to_datetime()` with `utc=True` to parse ISO‑8601 timestamps.\n",
+    "\n",
+    "### Second Hint\n",
+    "Extract `hour` or `day` to capture time‑of‑day patterns.\n",
+    "\n",
+    "### Reveal (optional)"
+    ]
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "cloud_api_df['timestamp'] = pd.to_datetime(\n",
+    "    cloud_api_df['timestamp'].astype(str).str.replace('Z', '', regex=False),\n",
+    "    utc=True,\n",
+    "    errors='coerce'\n",
+    ")\n",
+    "cloud_api_df['hour'] = cloud_api_df['timestamp'].dt.hour\n",
+    "cloud_api_df[['timestamp', 'hour']].head()"
+    ]
+  },
+
+
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## 4. Exploring CloudTrail API behavior\n",
+    "\n",
+    "**Goal:** Identify patterns in API usage.\n",
+    "\n",
+    "### First Hint\n",
+    "Look for unusual API calls, regions, or spikes in activity.\n",
+    "\n",
+    "### Second Hint\n",
+    "Group by `event_name`, `user`, or `region` to find anomalies.\n",
+    "\n",
+    "### Reveal (optional)"
+    ]
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "cloud_api_df['event_name'].value_counts().head(20)"
+    ]
+  },
+
+
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## 5. Selecting ML features\n",
+    "\n",
+    "**Goal:** Choose which columns from `cloud_api_features.csv` to use.\n",
+    "\n",
+    "### First Hint\n",
+    "Pick features that capture behavior, not identifiers.\n",
+    "\n",
+    "### Second Hint\n",
+    "Good candidates include counts, unique values, error rates, and time‑based features.\n",
+    "\n",
+    "### Reveal (optional)"
+    ]
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Example feature selection pattern\n",
+    "candidate_cols = [c for c in features_df.columns if c not in ['user', 'role', 'resource']]\n",
+    "features_df[candidate_cols].head()"
+    ]
+  },
+
+
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## 6. Choosing an anomaly detection model\n",
+    "\n",
+    "**Goal:** Select a model appropriate for unsupervised anomaly detection.\n",
+    "\n",
+    "### First Hint\n",
+    "IsolationForest is a strong default for tabular anomaly detection.\n",
+    "\n",
+    "### Second Hint\n",
+    "LocalOutlierFactor works well for density‑based anomalies; OneClassSVM is more sensitive.\n",
+    "\n",
+    "### Reveal (optional)"
+    ]
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "from sklearn.ensemble import IsolationForest\n",
+    "example_model = IsolationForest(n_estimators=100, contamination=0.05, random_state=42)\n",
+    "example_model"
+    ]
+  },
+
+
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## 7. Training your model\n",
+    "\n",
+    "**Goal:** Fit your model on the selected features.\n",
+    "\n",
+    "### First Hint\n",
+    "Ensure your feature matrix contains only numeric columns.\n",
+    "\n",
+    "### Second Hint\n",
+    "Call `.fit()` on your model with the selected feature matrix.\n",
+    "\n",
+    "### Reveal (optional)"
+    ]
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Example training pattern\n",
+    "X = features_df.select_dtypes(include=['int64', 'float64'])\n",
+    "example_model.fit(X)"
+    ]
+  },
+
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## 8. Scoring suspicious API sequences\n",
+    "\n",
+    "**Goal:** Compute anomaly scores.\n",
+    "\n",
+    "### First Hint\n",
+    "Use `decision_function()` or `score_samples()`.\n",
+    "\n",
+    "### Second Hint\n",
+    "Aggregate scores (mean, min, max) to produce a single `anomaly_score`.\n",
+    "\n",
+    "### Reveal (optional)"
+    ]
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "# Example scoring pattern\n",
+    "scores = example_model.decision_function(X)\n",
+    "float(scores.mean())"
+    ]
+  },
+  {
+   "cell_type": "markdown",
+   "source": [
+    "## 9. Writing your explanation\n",
+    "\n",
+    "**Goal:** Explain your model choice and feature selection.\n",
+    "\n",
+    "### First Hint\n",
+    "Describe why your model fits the structure of the data.\n",
+    "\n",
+    "### Second Hint\n",
+    "Explain how your chosen features capture behavioral anomalies.\n",
+    "\n",
+    "### Reveal (optional)"
+    ]
+  },
+  {
+   "cell_type": "code",
+   "source": [
+    "example_explanation = \"\"\"\n",
+    "I chose IsolationForest because it handles high‑dimensional tabular data well\n",
+    "and does not assume a specific distribution. The features I selected capture\n",
+    "API call frequency, resource diversity, and error behavior, which are strong\n",
+    "signals of anomalous cloud activity.\n",
+    "\"\"\"\n",
+    "example_explanation"
+    ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}

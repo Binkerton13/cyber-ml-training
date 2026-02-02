@@ -1,7 +1,7 @@
 {
-    "compromised_user": "devops_1",
-    "attacker_ip": "185.199.110.28",
-    "attacker_region": "ap-southeast-1",
+    "compromised_user": "cloud_eng_2",
+    "attacker_ip": "185.199.110.141",
+    "attacker_region": "eu-central-1",
     "sensitive_bucket": "sensitive-data",
     "attacker_bucket": "external-exfil-bucket",
     "sensitive_objects": [

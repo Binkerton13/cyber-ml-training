@@ -38,3 +38,5 @@ def evaluate_soc(path):
 if __name__ == "__main__":
     result = evaluate_soc(sys.argv[1])
     print(json.dumps(result, indent=4))
+    
+### End of File ###

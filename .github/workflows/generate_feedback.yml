@@ -35,36 +35,36 @@ jobs:
         combined = data["combined"]
 
         # Build markdown report
-md = f'''# Scenario 01 — Feedback Report
+        md = f'''# Scenario 01 — Feedback Report
 
-## Total Score: **{total} / 300**
+        ## Total Score: **{total} / 300**
 
----
+        ---
 
-## SOC Evaluation
-**Score:** {soc["soc_score"]} / 100  
-**Feedback:**
-- {'\n- '.join(soc["soc_feedback"])}
+        ## SOC Evaluation
+        **Score:** {soc["soc_score"]} / 100  
+        **Feedback:**
+        - {'\n- '.join(soc["soc_feedback"])}
 
----
+        ---
 
-## ML Evaluation
-**Score:** {ml["ml_score"]} / 100  
-**Feedback:**
-- {'\n- '.join(ml["ml_feedback"])}
+        ## ML Evaluation
+        **Score:** {ml["ml_score"]} / 100  
+        **Feedback:**
+        - {'\n- '.join(ml["ml_feedback"])}
 
----
+        ---
 
-## Combined Evaluation
-**Score:** {combined["combined_score"]} / 100  
-**Feedback:**
-- {'\n- '.join(combined["combined_feedback"])}
+        ## Combined Evaluation
+        **Score:** {combined["combined_score"]} / 100  
+        **Feedback:**
+        - {'\n- '.join(combined["combined_feedback"])}
 
----
+        ---
 
-## Summary
-This report summarizes your SOC analysis, ML model performance, and how well your findings aligned.
-'''
+        ## Summary
+        This report summarizes your SOC analysis, ML model performance, and how well your findings aligned.
+        '''
 
         # Save report
         os.makedirs("feedback_reports", exist_ok=True)

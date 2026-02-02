@@ -34,6 +34,11 @@ jobs:
         ml = data["ml"]
         combined = data["combined"]
 
+        # Precompute joined feedback strings (avoids backslashes in f-strings)
+        soc_fb = "- " + "\n- ".join(soc["soc_feedback"]) if soc["soc_feedback"] else "No feedback."
+        ml_fb = "- " + "\n- ".join(ml["ml_feedback"]) if ml["ml_feedback"] else "No feedback."
+        combined_fb = "- " + "\n- ".join(combined["combined_feedback"]) if combined["combined_feedback"] else "No feedback."
+
         # Build markdown report
         md = f'''# Scenario 01 — Feedback Report
 
@@ -44,21 +49,21 @@ jobs:
         ## SOC Evaluation
         **Score:** {soc["soc_score"]} / 100  
         **Feedback:**
-        - {'\n- '.join(soc["soc_feedback"])}
+        {soc_fb}
 
         ---
 
         ## ML Evaluation
         **Score:** {ml["ml_score"]} / 100  
         **Feedback:**
-        - {'\n- '.join(ml["ml_feedback"])}
+        {ml_fb}
 
         ---
 
         ## Combined Evaluation
         **Score:** {combined["combined_score"]} / 100  
         **Feedback:**
-        - {'\n- '.join(combined["combined_feedback"])}
+        {combined_fb}
 
         ---
 

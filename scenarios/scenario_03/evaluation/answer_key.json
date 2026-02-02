@@ -1,0 +1,19 @@
+{
+    "compromised_user": "devops_1",
+    "attacker_ip": "185.199.110.28",
+    "attacker_region": "ap-southeast-1",
+    "sensitive_bucket": "sensitive-data",
+    "attacker_bucket": "external-exfil-bucket",
+    "sensitive_objects": [
+        "hr/payroll_2024.xlsx",
+        "finance/q4_results.pdf",
+        "engineering/roadmap_2025.docx"
+    ],
+    "expected_mitre": [
+        "T1078",
+        "T1098",
+        "T1087",
+        "T1530",
+        "T1567"
+    ]
+}

@@ -27,48 +27,52 @@ jobs:
     - name: Locate student submission
       id: find_files
       run: |
-        echo "SOC_FILE=$(find student_submissions -name soc_output.json)" >> $GITHUB_ENV
-        echo "ML_FILE=$(find student_submissions -name ml_output.json)" >> $GITHUB_ENV
+        # Find scenario folder (e.g., scenario_01, scenario_02, scenario_03, etc.)
+        SCENARIO=$(find student_submissions -maxdepth 2 -type d -name "scenario_*" | head -n 1)
+        echo "SCENARIO=$SCENARIO" >> $GITHUB_ENV
+
+        # Find SOC + ML outputs
+        echo "SOC_FILE=$(find $SCENARIO -name soc_output.json)" >> $GITHUB_ENV
+        echo "ML_FILE=$(find $SCENARIO -name ml_output.json)" >> $GITHUB_ENV
 
     - name: Evaluate SOC Output
       run: |
-        python scenarios/scenario_01/evaluation/evaluate_soc.py $SOC_FILE > soc_result.json
+        python scenarios/$(basename $SCENARIO)/evaluation/evaluate_soc.py \$SOC_FILE \scenarios/$(basename $SCENARIO)/evaluation/answer_key.json \> soc_result.json
 
     - name: Evaluate ML Output
       run: |
-        python scenarios/scenario_01/evaluation/evaluate_ml.py $ML_FILE > ml_result.json
+        python scenarios/$(basename $SCENARIO)/evaluation/evaluate_ml.py \$ML_FILE \scenarios/$(basename $SCENARIO)/evaluation/answer_key.json \> ml_result.json
 
     - name: Evaluate Combined Output
       run: |
-        python scenarios/scenario_01/evaluation/evaluate_combined.py $SOC_FILE $ML_FILE > combined_result.json
+        python scenarios/$(basename $SCENARIO)/evaluation/evaluate_combined.py \$SOC_FILE \$ML_FILE \scenarios/$(basename $SCENARIO)/evaluation/answer_key.json \> combined_result.json
 
-    - name: Combine all results
+    - name: Combine evaluation results
       run: |
+        mkdir -p evaluation_results
         python - << 'EOF'
         import json
 
-        with open("soc_result.json") as f:
-            soc = json.load(f)
-        with open("ml_result.json") as f:
-            ml = json.load(f)
-        with open("combined_result.json") as f:
-            combined = json.load(f)
+        soc = json.load(open("soc_result.json"))
+        ml = json.load(open("ml_result.json"))
+        combined = json.load(open("combined_result.json"))
 
-        final = {
+        output = {
+            "scenario": "${SCENARIO}",
             "soc": soc,
             "ml": ml,
             "combined": combined,
             "total_score": soc["soc_score"] + ml["ml_score"] + combined["combined_score"]
         }
 
-        with open("evaluation_output.json", "w") as f:
-            json.dump(final, f, indent=4)
+        with open("evaluation_results/evaluation_output.json", "w") as f:
+            json.dump(output, f, indent=4)
         EOF
 
     - name: Save evaluation results
       run: |
         mkdir -p evaluation_results
-        cp evaluation_output.json evaluation_results/
+        cp evaluation_results/evaluation_output.json evaluation_results/
 
     - name: Commit evaluation results
       uses: stefanzweifel/git-auto-commit-action@v5

@@ -1,0 +1,2 @@
+timestamp,username,source_ip,destination_host,event_type,details
+2024-01-01T00:00:00Z,user1,10.0.0.1,server01,login,success

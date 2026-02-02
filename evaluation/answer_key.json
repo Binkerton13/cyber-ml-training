@@ -1,0 +1,12 @@
+{
+    "compromised_user": "a.lee",
+    "attacker_ip": "185.199.110.18",
+    "malicious_process": "mimikatz.exe",
+    "exfil_ip": "185.199.110.*",
+    "expected_mitre": [
+        "T1078",
+        "T1003",
+        "T1021",
+        "T1041"
+    ]
+}
